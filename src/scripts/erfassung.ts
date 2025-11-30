@@ -717,16 +717,34 @@ async function loadImageWithOrientation(file: File): Promise<LoadedImage> {
   const orientation = (await readExifOrientation(file)) ?? 1;
 
   // Prefer ImageBitmap to avoid layout side effects and free memory afterwards.
+  // Modern browsers auto-apply EXIF orientation when loading images via createImageBitmap.
+  // We use imageOrientation: 'none' to prevent browser auto-rotation, so we can
+  // apply orientation transforms ourselves for consistent behavior.
   if (typeof createImageBitmap === "function") {
     try {
-      const bitmap = await createImageBitmap(file);
+      // Try to disable browser auto-rotation by using imageOrientation: 'none'
+      // This gives us consistent control over orientation handling.
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "none",
+      });
       return {
         image: bitmap,
         orientation,
         cleanup: () => bitmap.close?.(),
       };
     } catch (error) {
-      console.warn("ImageBitmap konnte nicht erstellt werden, fallback", error);
+      // imageOrientation option may not be supported in older browsers
+      // In that case, createImageBitmap auto-rotates, so we set orientation to 1
+      try {
+        const bitmap = await createImageBitmap(file);
+        return {
+          image: bitmap,
+          orientation: 1, // Browser already applied rotation
+          cleanup: () => bitmap.close?.(),
+        };
+      } catch (innerError) {
+        console.warn("ImageBitmap konnte nicht erstellt werden, fallback", innerError);
+      }
     }
   }
 
