@@ -1,0 +1,21 @@
+{
+  "name": "photo-pdf-app",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "prebuild": "npm run bundle:erfassung",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "bundle:erfassung": "esbuild src/scripts/erfassung.ts --bundle --format=esm --platform=browser --minify --sourcemap --outfile=public/scripts/erfassung.js --define:import.meta.env.BASE_URL=\\\"/pdf/\\\" --alias:@assets=./src/assets --loader:.png=dataurl --loader:.svg=dataurl"
+  },
+  "dependencies": {
+    "astro": "^5.16.2",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "sharp-cli": "^5.2.0"
+  }
+}

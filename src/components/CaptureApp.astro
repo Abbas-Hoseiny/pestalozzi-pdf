@@ -1,0 +1,318 @@
+---
+import AppLayout from "../layouts/AppLayout.astro";
+import Icon from "./Icon.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  scriptSrc: string;
+}
+
+const {
+  title = "Fotoerfassung & Notizen",
+  description = "Auf dieser Seite werden Fotos aufgenommen, beschrieben und für den späteren PDF-Export vorbereitet.",
+  scriptSrc,
+} = Astro.props as Props;
+---
+<AppLayout title={title} description={description}>
+  <div class="page-shell capture">
+    <section class="capture-panel capture-panel--solo content-card content-card--dark">
+      <div class="panel-head">
+        <p class="eyebrow">Direkte Erfassung</p>
+        <h1>Foto & Notiz</h1>
+      </div>
+      <div class="capture-controls">
+        <label class="upload-btn" for="photoInput">
+          <span class="upload-label">
+            <Icon name="upload" size={18} />
+            <span>Aufnehmen oder auswählen</span>
+          </span>
+          <small>Kamera oder Mediathek – keine weiteren Schritte.</small>
+        </label>
+        <button type="button" class="btn btn-secondary btn-wide" id="quickCaptureButton">
+          <Icon name="camera" size={18} />
+          <span>Sofort aufnehmen</span>
+        </button>
+        <div class="quality-note">
+          <strong>Papier-Verarbeitung aktiv</strong>
+          <p>
+            Fotos werden automatisch für Ausdrucke optimiert und korrekt ausgerichtet.
+          </p>
+        </div>
+      </div>
+      <input id="photoInput" type="file" accept="image/*" multiple hidden />
+      <div class="panel-actions">
+        <button class="btn btn-primary" id="pdfButton" disabled>
+          <Icon name="file" size={18} />
+          <span>PDF erzeugen</span>
+        </button>
+        <div class="panel-actions-secondary">
+          <button class="btn btn-secondary" id="shareButton" disabled>
+            <Icon name="share" size={18} />
+            <span>PDF teilen</span>
+          </button>
+          <button class="btn btn-secondary btn-ghost" id="downloadButton" disabled>
+            <Icon name="arrow-down" size={18} />
+            <span>PDF speichern</span>
+          </button>
+        </div>
+        <p id="statusMessage" class="status-text" role="status">
+          <span class="status-icon"><Icon name="info" size={16} /></span>
+          <span data-role="status-copy">Bereit.</span>
+        </p>
+      </div>
+    </section>
+
+    <section class="capture-list content-card content-card--frost">
+      <div class="list-head">
+        <h2>Fotos & Beschreibungen</h2>
+      </div>
+      <div id="photoList" class="photo-list" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <script type="module" src={scriptSrc}></script>
+
+  <style>
+    .capture {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .capture-panel {
+      padding: clamp(1.5rem, 4vw, 2.5rem);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .capture-panel--solo {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .panel-head {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .capture-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .btn-wide {
+      width: 100%;
+      justify-content: center;
+      padding: 0.9rem 1rem;
+    }
+
+    .quality-note {
+      margin: 0;
+      padding: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .quality-note strong {
+      font-size: 0.95rem;
+    }
+
+    .quality-note p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+    }
+
+    .panel-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .panel-actions-secondary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px dashed var(--color-border);
+      color: var(--color-text-body);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    .upload-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .status-text {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--color-text-body);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--color-border);
+    }
+
+    .status-text[data-tone="error"] {
+      color: #ffb4ab;
+      font-weight: 600;
+    }
+
+    .status-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--color-accent-soft);
+      color: var(--color-accent);
+    }
+
+    .status-text[data-tone="error"] .status-icon {
+      background: rgba(255, 180, 171, 0.2);
+      color: #ffb4ab;
+    }
+
+    .btn[data-loading="true"] {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .upload-btn {
+      border: 1px dashed var(--color-border);
+      border-radius: 20px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--color-text-body);
+      display: grid;
+      gap: 0.35rem;
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .upload-btn small {
+      font-weight: normal;
+      color: var(--color-text-muted);
+      opacity: 0.85;
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+    }
+
+    .capture-list {
+      padding: clamp(1.5rem, 4vw, 2.25rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .empty-inline {
+      border: 1px dashed var(--color-border);
+      border-radius: 18px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--color-text-muted);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .list-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .photo-list {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+
+    .photo-card {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 1rem;
+      padding: 1.1rem;
+      border-radius: 22px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+      box-shadow: 0 15px 25px rgba(0, 0, 0, 0.35);
+      color: var(--color-text-body);
+    }
+
+    .photo-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+    }
+
+    .photo-details header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .card-actions button {
+      border: 1px solid var(--color-border);
+      border-radius: 9px;
+      padding: 0.3rem 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .photo-details textarea {
+      border-radius: 14px;
+      border: 1px solid var(--color-border);
+      padding: 0.65rem 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--color-text-body);
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    @media (max-width: 900px) {
+      .photo-card {
+        grid-template-columns: 1fr;
+      }
+
+      .photo-thumb {
+        height: 220px;
+      }
+    }
+  </style>
+</AppLayout>

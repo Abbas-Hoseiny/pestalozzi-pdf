@@ -1,0 +1,23 @@
+---
+import type { IconName } from '../lib/icons';
+import { iconSvg } from '../lib/icons';
+
+interface Props {
+  name: IconName;
+  size?: number;
+  label?: string;
+  class?: string;
+}
+
+const { name, size = 20, label, class: className } = Astro.props;
+const markup = iconSvg(name, size);
+const ariaHidden = label ? undefined : 'true';
+const role = label ? 'img' : undefined;
+---
+<span
+  class:list={[ 'icon', className ]}
+  role={role}
+  aria-label={label}
+  aria-hidden={ariaHidden}
+  set:html={markup}
+/>

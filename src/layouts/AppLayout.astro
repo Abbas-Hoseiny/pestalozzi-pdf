@@ -1,0 +1,83 @@
+---
+import '../styles/global.css';
+import firmLogo from '@assets/branding/logo-firmen.svg';
+import Icon from '../components/Icon.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Foto-PDF-App für Bio-Jungpflanzen',
+  description = 'Fotos aufnehmen, beschreiben und als PDF teilen – direkt im Browser.',
+} = Astro.props as Props;
+
+const rawBase = import.meta.env.BASE_URL ?? '/';
+const basePath = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+---
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href={`${basePath}favicon.svg`} />
+  </head>
+  <body>
+    <a class="skip-link" href="#hauptinhalt">Zum Inhalt springen</a>
+    <header class="site-header">
+      <div class="brand">
+        <img src={firmLogo.src} width="72" height="72" alt="Logo Christian Bärthele Bio-Jungpflanzen" />
+        <div class="brand-label">
+          <strong>Christian Bärthele</strong>
+          <span>Bio-Jungpflanzen</span>
+        </div>
+      </div>
+    </header>
+    <main id="hauptinhalt">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <span>Abbas Hoseiny</span>
+      <a
+        class="footer-link"
+        href="https://github.com/Abbas-Hoseiny/pdf"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="GitHub Repository"
+      >
+        <Icon name="github" size={18} />
+      </a>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .site-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem 1rem;
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+  }
+
+  .footer-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--color-text-muted);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .footer-link:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+</style>
