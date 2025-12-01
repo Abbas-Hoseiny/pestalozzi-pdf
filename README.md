@@ -13,7 +13,7 @@ Web-App zum Erfassen von Fotos mit kurzen Beschreibungen und anschließendem PDF
 
 - Läuft komplett offline im Browser, keine Uploads an Server.
 - HEIC wird abgefangen; JPG/PNG/WebP funktionieren sofort.
-- PDF-Layout mit Logo, Pflanzen-Icon und Textbox pro Foto.
+- PDF liefert pro Seite ausschließlich das Foto (kein Logo, keine Textbox).
 - Mobile Geräte nutzen das Share Sheet, Desktop lädt automatisch herunter.
 
 ## Entwicklung (kurz)

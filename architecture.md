@@ -28,7 +28,7 @@ src/
 1. **Upload** – `erfassung.ts` registriert `#photoInput`. Ausgewählte Dateien werden über `entries[]` verwaltet (inkl. `URL.createObjectURL`).
 2. **Normalisierung** – Standardmäßig bleiben Bilder in Originalqualität erhalten; HEIC wird mit einer Fehlermeldung abgewiesen. Eine Canvas-Reduktion (~2000 px) existiert als Helper, wird jedoch derzeit nicht aktiv geschaltet.
 3. **UI-Render** – `render()` erzeugt Karten mit Vorschaubild, Beschreibungstextfeld, Sortierbuttons. Änderungen aktualisieren das gemeinsame Array.
-4. **PDF-Erzeugung** – `pdf.ts` baut jede Seite mit Kopfzeile (Logo auf der ersten Seite) und einem Textblock unter dem Bild. Die Funktion gibt ein `Uint8Array` zurück.
+4. **PDF-Erzeugung** – `pdf.ts` legt pro Eintrag eine A4-Seite an und zeichnet ausschließlich das Foto zentriert (keine Kopfzeile, keine Textbox). Die Funktion gibt ein `Uint8Array` zurück.
 5. **Export** – `erfassung.ts` erzeugt daraus einen Blob. Mobile Geräte nutzen `navigator.share` (mit Sicherheitsprüfungen), alle anderen triggern `triggerDownload`.
 
 ## Qualitätsstrategien
