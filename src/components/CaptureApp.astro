@@ -33,27 +33,9 @@ const {
           <Icon name="camera" size={18} />
           <span>Sofort aufnehmen</span>
         </button>
-        <div class="mode-toggle" aria-labelledby="modeToggleLabel" role="group">
-          <div class="mode-toggle-head">
-            <span id="modeToggleLabel">Modus für neue Aufnahmen</span>
-            <small id="captureModeStatus">Aktuell: Foto (Standard)</small>
-          </div>
-          <div class="mode-toggle-options" role="radiogroup" aria-labelledby="modeToggleLabel">
-            <label class="mode-option">
-              <input type="radio" name="captureMode" value="photo" defaultChecked />
-              <span>Foto</span>
-            </label>
-            <label class="mode-option">
-              <input type="radio" name="captureMode" value="document" />
-              <span>Dokument</span>
-            </label>
-          </div>
-        </div>
         <div class="quality-note">
-          <strong>Papier-Verarbeitung aktiv</strong>
-          <p>
-            Fotos werden automatisch für Ausdrucke optimiert und korrekt ausgerichtet.
-          </p>
+          <strong>PDF nur mit Fotos</strong>
+          <p>Dokumentenmodus entfernt – jede Seite enthält ausschließlich das Originalfoto.</p>
         </div>
       </div>
       <input id="photoInput" type="file" accept="image/*" multiple hidden />
@@ -144,72 +126,6 @@ const {
       margin: 0;
       font-size: 0.85rem;
       color: var(--color-text-muted);
-    }
-
-    .mode-toggle {
-      border: 1px solid var(--color-border);
-      border-radius: 18px;
-      padding: 1rem 1.25rem;
-      background: rgba(255, 255, 255, 0.04);
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .mode-toggle-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      font-size: 0.9rem;
-    }
-
-    .mode-toggle-head small {
-      color: var(--color-text-muted);
-    }
-
-    .mode-toggle-options {
-      display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-    }
-
-    .mode-option {
-      border: 1px solid var(--color-border);
-      border-radius: 999px;
-      padding: 0.35rem 0.85rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      cursor: pointer;
-      background: rgba(255, 255, 255, 0.03);
-      font-weight: 600;
-    }
-
-    .mode-option input {
-      appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid var(--color-border);
-      display: inline-block;
-      position: relative;
-    }
-
-    .mode-option input:checked {
-      border-color: var(--color-accent);
-    }
-
-    .mode-option input:checked::after {
-      content: "";
-      position: absolute;
-      inset: 2px;
-      border-radius: 50%;
-      background: var(--color-accent);
-    }
-
-    .mode-option span {
-      font-size: 0.9rem;
     }
 
     .panel-actions {
@@ -371,22 +287,6 @@ const {
       gap: 0.5rem;
     }
 
-    .mode-badge {
-      border-radius: 999px;
-      padding: 0.2rem 0.75rem;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border: 1px solid var(--color-border);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .mode-badge--document {
-      border-color: rgba(255, 255, 255, 0.35);
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--color-accent);
-    }
-
     .card-actions {
       display: flex;
       gap: 0.35rem;
@@ -407,34 +307,6 @@ const {
       color: var(--color-text-body);
       resize: vertical;
       min-height: 120px;
-    }
-
-    .scan-note {
-      margin: 0.45rem 0 0.25rem;
-      font-size: 0.85rem;
-      color: var(--color-text-muted);
-    }
-
-    .scan-toggle {
-      align-self: flex-start;
-      margin-bottom: 0.85rem;
-      padding: 0.3rem 0.9rem;
-      border-radius: 999px;
-      border: 1px solid var(--color-border);
-      background: rgba(255, 255, 255, 0.08);
-      color: inherit;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.15s ease;
-    }
-
-    .scan-toggle:hover:enabled {
-      background: rgba(255, 255, 255, 0.16);
-    }
-
-    .scan-toggle[disabled] {
-      opacity: 0.6;
-      cursor: not-allowed;
     }
 
     @media (max-width: 900px) {

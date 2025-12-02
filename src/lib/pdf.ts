@@ -1,11 +1,8 @@
 import { PDFDocument } from "pdf-lib";
 
-export type CaptureMode = "photo" | "document";
-
 export interface PhotoEntryPayload {
   file: File;
   description?: string;
-  mode: CaptureMode;
 }
 
 const A4_WIDTH = 595.28;
