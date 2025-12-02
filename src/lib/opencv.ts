@@ -1,5 +1,7 @@
 const OPENCV_SRC =
   "https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.12.0-release.1/dist/opencv.js";
+const OPENCV_INIT_TIMEOUT = 15000;
+const OPENCV_POLL_INTERVAL = 50;
 
 type CvModule = typeof import("@techstark/opencv-js");
 
@@ -17,50 +19,88 @@ export function ensureVisionRuntime() {
       new Error("OpenCV kann nur im Browser geladen werden.")
     );
   }
-  if (window.cv) {
+  if (window.cv && isCvRuntimeReady(window.cv)) {
     return Promise.resolve(window.cv);
   }
   if (!opencvPromise) {
     opencvPromise = new Promise<CvModule>((resolve, reject) => {
+      const fail = (error: Error) => {
+        opencvPromise = null;
+        reject(error);
+      };
+      const onReady = () => waitForCvReady(resolve, fail);
+      const onError = () =>
+        fail(new Error("OpenCV-Skript konnte nicht geladen werden."));
+
+      if (window.cv && !isCvRuntimeReady(window.cv)) {
+        onReady();
+        return;
+      }
+
       const existing = document.querySelector<HTMLScriptElement>(
         `script[data-opencv="true"]`
       );
       if (existing) {
-        existing.addEventListener("load", () => {
-          if (window.cv) {
-            resolve(window.cv);
-          } else {
-            reject(
-              new Error(
-                "OpenCV konnte nach dem Laden nicht initialisiert werden."
-              )
-            );
-          }
-        });
-        existing.addEventListener("error", () => {
-          reject(new Error("OpenCV-Skript konnte nicht geladen werden."));
-        });
+        if (
+          existing.dataset.state === "loaded" ||
+          existing.readyState === "complete"
+        ) {
+          onReady();
+        } else {
+          existing.addEventListener("load", onReady, { once: true });
+          existing.addEventListener("error", onError, { once: true });
+        }
         return;
       }
+
       const script = document.createElement("script");
       script.async = true;
       script.src = OPENCV_SRC;
       script.crossOrigin = "anonymous";
       script.dataset.opencv = "true";
-      script.onload = () => {
-        if (window.cv) {
-          resolve(window.cv);
-        } else {
-          reject(new Error("OpenCV konnte nicht initialisiert werden."));
-        }
-      };
-      script.onerror = () => {
-        reject(new Error("OpenCV-Skript konnte nicht geladen werden."));
-      };
+      script.dataset.state = "loading";
+      script.addEventListener("load", () => {
+        script.dataset.state = "loaded";
+        onReady();
+      });
+      script.addEventListener("error", onError, { once: true });
       document.head.appendChild(script);
     });
   }
   return opencvPromise;
+}
+
+function isCvRuntimeReady(cv?: CvModule | null): cv is CvModule {
+  return Boolean(
+    cv && typeof cv.Mat === "function" && typeof cv.imread === "function"
+  );
+}
+
+function waitForCvReady(
+  resolve: (cv: CvModule) => void,
+  reject: (error: Error) => void,
+  startTime: number = typeof performance !== "undefined" &&
+  typeof performance.now === "function"
+    ? performance.now()
+    : Date.now()
+) {
+  const cv = window.cv;
+  if (isCvRuntimeReady(cv)) {
+    resolve(cv);
+    return;
+  }
+  const now =
+    typeof performance !== "undefined" && typeof performance.now === "function"
+      ? performance.now()
+      : Date.now();
+  if (now - startTime > OPENCV_INIT_TIMEOUT) {
+    reject(new Error("OpenCV konnte nicht initialisiert werden (Timeout)."));
+    return;
+  }
+  window.setTimeout(
+    () => waitForCvReady(resolve, reject, startTime),
+    OPENCV_POLL_INTERVAL
+  );
 }
 
 export type DocumentWarpResult = {
