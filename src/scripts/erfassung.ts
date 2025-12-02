@@ -72,58 +72,16 @@ function ready() {
     return;
   }
 
-  const triggerCameraCapture = (forceCamera = false) => {
-    if (forceCamera) {
-      fileInput.setAttribute("capture", "environment");
-    } else {
-      fileInput.removeAttribute("capture");
-    }
+  const triggerCameraCapture = () => {
+    fileInput.setAttribute("capture", "environment");
     fileInput.click();
-    if (forceCamera) {
-      requestAnimationFrame(() => {
-        fileInput.removeAttribute("capture");
-      });
-    }
+    requestAnimationFrame(() => {
+      fileInput.removeAttribute("capture");
+    });
   };
-
-  let initialPointerHandler: ((event: PointerEvent) => void) | null = null;
-  let initialKeyHandler: ((event: KeyboardEvent) => void) | null = null;
-
-  const removeInitialCaptureHandlers = () => {
-    if (initialPointerHandler) {
-      window.removeEventListener("pointerdown", initialPointerHandler);
-      initialPointerHandler = null;
-    }
-    if (initialKeyHandler) {
-      window.removeEventListener("keydown", initialKeyHandler);
-      initialKeyHandler = null;
-    }
-  };
-
-  initialPointerHandler = () => {
-    removeInitialCaptureHandlers();
-    triggerCameraCapture(true);
-  };
-
-  initialKeyHandler = (event: KeyboardEvent) => {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-    event.preventDefault();
-    removeInitialCaptureHandlers();
-    triggerCameraCapture(true);
-  };
-
-  window.addEventListener("pointerdown", initialPointerHandler, { once: true });
-  window.addEventListener("keydown", initialKeyHandler);
-  fileInput.addEventListener("click", removeInitialCaptureHandlers);
-  fileInput.addEventListener("change", removeInitialCaptureHandlers, {
-    once: true,
-  });
 
   quickCaptureButton?.addEventListener("click", () => {
-    removeInitialCaptureHandlers();
-    triggerCameraCapture(true);
+    triggerCameraCapture();
   });
 
   fileInput.addEventListener("change", async (event) => {
@@ -144,10 +102,12 @@ function ready() {
     pdfButton.disabled = true;
     pdfButton.dataset.loading = "true";
     try {
-      const payload: PhotoEntryPayload[] = entries.map(({ file, description }) => ({
-        file,
-        description,
-      }));
+      const payload: PhotoEntryPayload[] = entries.map(
+        ({ file, description }) => ({
+          file,
+          description,
+        })
+      );
       const bytes = await generatePhotoPdf(payload);
       const blob = new Blob([bytes], { type: "application/pdf" });
       const filename = `foto-notizen-${new Date()
@@ -269,10 +229,7 @@ async function addFiles(
   setStatus(status, `${entries.length} Foto(s) vorbereitet.`);
 }
 
-function render(
-  list: HTMLElement,
-  pdfButton: HTMLButtonElement
-) {
+function render(list: HTMLElement, pdfButton: HTMLButtonElement) {
   if (!entries.length) {
     const emptyState = document.createElement("div");
     emptyState.className = "empty-inline";

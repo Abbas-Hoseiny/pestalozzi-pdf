@@ -102,7 +102,13 @@ export async function generatePhotoPdf(entries: PhotoEntryPayload[]) {
     const imageY = PAGE_PADDING + (availableHeight - drawHeight) / 2;
 
     const labelBaseY = imageY + drawHeight + LABEL_TEXT_GAP;
-    drawEntryLabel(page, assets, `Foto ${index + 1}`, imageX, labelBaseY);
+    drawEntryLabel(
+      page,
+      assets,
+      `Foto ${index + 1}/${entries.length}`,
+      imageX,
+      labelBaseY
+    );
 
     page.drawImage(img, {
       x: imageX,
@@ -114,7 +120,7 @@ export async function generatePhotoPdf(entries: PhotoEntryPayload[]) {
     const description = entry.description?.trim();
     if (description) {
       drawDescriptionWithOverflow(pdfDoc, page, assets, description, {
-        heading: `Foto ${index + 1}`,
+        heading: `Foto ${index + 1}/${entries.length}`,
         startX: imageX,
         startBaseline: imageY - DESCRIPTION_GAP,
         maxWidth: drawWidth,
