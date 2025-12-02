@@ -100,3 +100,47 @@
   - **Tests:**
     1. `npm run build && npm run preview` → Browserstack/Real Device: beide Modi testen, Share/Download prüfen.
     2. Review der neuen Dokumentation gegen tatsächliches Verhalten (Peer-Review oder Self-Checkliste).
+
+  ## Schritt 10 – OpenCV/Auto-Crop Infrastruktur
+
+  - **Ziel:** Bringt die technische Basis für automatische Eckenerkennung & Perspektiv-Korrektur in den Dokumentenmodus.
+  - **Vorgehen:**
+    - `opencv.js` (oder vergleichbare WASM-Library) als optionales Asset integrieren; Lazy-Load erst im Dokumentmodus.
+    - Utility `ensureVisionRuntime()` erstellen, der das Skript lädt und Promises cached.
+    - TypeScript-Shims hinzufügen, damit `cv.Mat` & Co. typed sind, ohne globale `any`-Flut.
+  - **Tests:**
+    1. `npm run build` sicherstellen, dass Rollup/Vite die WASM-Dateien kopiert.
+    2. In `npm run dev` Dokumentmodus aktivieren → Konsole darf beim ersten Wechsel keine Ladefehler werfen.
+
+  ## Schritt 11 – Konturerkennung & Perspektive
+
+  - **Ziel:** Implementiert `detectDocumentContour(canvas)` und `warpPerspective(canvas, corners)`.
+  - **Vorgehen:**
+    - Canvas → `cv.Mat`, Graustufen, Blur, Canny, `findContours`, `approxPolyDP`.
+    - Größte konvexe 4-Punkt-Kontur wählen, Punkte sortieren (TL/TR/BR/BL) und mit `cv.getPerspectiveTransform` + `cv.warpPerspective` in ein neues Canvas projizieren.
+    - Fallback, wenn keine Kontur gefunden wird (Original zurückgeben + Flag `cropped: false`).
+  - **Tests:**
+    1. Drei Beispiel-Dokumente (schräg, quer, schlechtes Licht) durchlaufen lassen → optisch prüfen, ob geradegezogen.
+    2. Performance messen (Konsole `console.time`) – Ziel < 400 ms pro Bild auf Mobile.
+
+  ## Schritt 12 – UI/UX Absicherung
+
+  - **Ziel:** Nutzer:innen wissen, ob Auto-Crop gegriffen hat und können ggf. zurückwechseln.
+  - **Vorgehen:**
+    - Statusmeldung aktualisieren: „Dokument automatisch zugeschnitten“ bzw. „Scan-Optimierung nicht möglich“.
+    - Optional Toggle pro Karte („Auto-Crop rückgängig machen“) implementieren, das gespeicherte Original (ohne Warp) wiederherstellt.
+    - Debug-Modus (z. B. URL-Flag) einführen, der erkannte Ecken als Overlay zeigt, um QA zu vereinfachen.
+  - **Tests:**
+    1. UI-Clickthrough mit fehlerhaften Dokumenten → Meldung erscheint, keine Crashes.
+    2. E2E: Auto-Crop deaktivieren & wieder aktivieren → PDF muss jeweils andere Variante enthalten.
+
+  ## Schritt 13 – Qualitäts-Pass & Doku-Update
+
+  - **Ziel:** Abschlussrunde speziell für den Scanner: Performance, Edge Cases, Dokumentation.
+  - **Vorgehen:**
+    - Diverse Dokumenttypen prüfen (Rechnung, Ausweis-Kopie, handschriftliche Notiz) und Ergebnisse protokollieren.
+    - README + `architecture.md` um „Scanner-Modus“ erweitern; GIF/Screenshots hinzufügen.
+    - Optional Lighthouse/Performance-Audit, falls opencv.js das Bundle stark vergrößert → ggf. Dynamic Import & Code-Splitting optimieren.
+  - **Tests:**
+    1. `npm run build` + `npm run preview` → Lighthouse-Check, Bundlesize notieren.
+    2. QA-Checklist (siehe Schritt 9) erneut durchgehen, Fokus auf Dokument-Edge Cases.

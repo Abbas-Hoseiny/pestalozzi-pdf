@@ -409,6 +409,34 @@ const {
       min-height: 120px;
     }
 
+    .scan-note {
+      margin: 0.45rem 0 0.25rem;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+    }
+
+    .scan-toggle {
+      align-self: flex-start;
+      margin-bottom: 0.85rem;
+      padding: 0.3rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      background: rgba(255, 255, 255, 0.08);
+      color: inherit;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.15s ease;
+    }
+
+    .scan-toggle:hover:enabled {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .scan-toggle[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     @media (max-width: 900px) {
       .photo-card {
         grid-template-columns: 1fr;

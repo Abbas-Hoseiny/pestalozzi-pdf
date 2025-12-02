@@ -1,6 +1,9 @@
 import type { CaptureMode, PhotoEntryPayload } from "../lib/pdf";
 import { generatePhotoPdf } from "../lib/pdf";
 import { iconSvg } from "../lib/icons";
+import { autoCropDocument } from "../lib/opencv";
+
+type ScanPreference = "auto" | "original";
 
 // Der Modus wird pro Eintrag gespeichert, damit Foto- und Dokumentseiten gemischt werden können.
 type Entry = {
@@ -10,6 +13,8 @@ type Entry = {
   description: string;
   url: string;
   mode: CaptureMode;
+  scanPreference: ScanPreference;
+  scanInfo: { autoCropApplied: boolean };
 };
 
 const entries: Entry[] = [];
@@ -58,7 +63,12 @@ let lastPdfFilename: string | null = null;
 let lastPdfFile: File | null = null;
 let activeCaptureMode: CaptureMode = DEFAULT_CAPTURE_MODE;
 type ExportSnapshot = {
-  sources: Array<{ file: File; description: string; mode: CaptureMode }>;
+  sources: Array<{
+    file: File;
+    description: string;
+    mode: CaptureMode;
+    scanPreference: ScanPreference;
+  }>;
   preset: PresetKey;
 };
 let lastExportSnapshot: ExportSnapshot | null = null;
@@ -216,15 +226,18 @@ function ready() {
       lastPdfFilename = filename;
       lastPdfFile = file;
       lastExportSnapshot = {
-        sources: entries.map(({ sourceFile, description, mode }) => ({
-          file: sourceFile,
-          description,
-          mode,
-        })),
+        sources: entries.map(
+          ({ sourceFile, description, mode, scanPreference }) => ({
+            file: sourceFile,
+            description,
+            mode,
+            scanPreference,
+          })
+        ),
         preset: DEFAULT_PRESET,
       };
       clearEntries();
-      render(list, pdfButton);
+      render(list, pdfButton, status, shareButton, downloadButton);
       updateExportButtons(shareButton, downloadButton);
       setStatus(status, "PDF erzeugt. Jetzt teilen oder speichern.");
     } catch (error) {
@@ -282,7 +295,7 @@ function ready() {
     setStatus(status, "PDF gespeichert.");
   });
 
-  render(list, pdfButton);
+  render(list, pdfButton, status, shareButton, downloadButton);
   updateExportButtons(shareButton, downloadButton);
 }
 
@@ -297,13 +310,15 @@ async function addFiles(
   if (!files.length) return;
   resetGeneratedPdf(shareButton, downloadButton);
   let lastEntryId: string | null = null;
+  let autoCropFailures = 0;
   for (const file of files) {
     try {
       const entryMode = activeCaptureMode;
-      const normalized = await convertFileToPreset(
+      const processed = await convertFileToPreset(
         file,
         getPresetForMode(entryMode)
       );
+      const normalized = processed.file;
       const url = URL.createObjectURL(normalized);
       const entryId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
       entries.push({
@@ -313,7 +328,15 @@ async function addFiles(
         url,
         description: "",
         mode: entryMode,
+        scanPreference: entryMode === "document" ? "auto" : "original",
+        scanInfo: {
+          autoCropApplied: Boolean(processed.meta?.autoCropApplied),
+        },
       });
+      if (entryMode === "document" && !processed.meta?.autoCropApplied) {
+        autoCropFailures += 1;
+        entries[entries.length - 1].scanPreference = "original";
+      }
       lastEntryId = entryId;
     } catch (error) {
       console.error(error);
@@ -325,11 +348,25 @@ async function addFiles(
     }
   }
   pendingFocusEntryId = lastEntryId;
-  render(list, pdfButton);
-  setStatus(status, `${entries.length} Foto(s) vorbereitet.`);
+  render(list, pdfButton, status, shareButton, downloadButton);
+  if (autoCropFailures) {
+    setStatus(
+      status,
+      `${autoCropFailures} Dokument(e) konnten nicht automatisch zugeschnitten werden – Original verwendet.`,
+      "error"
+    );
+  } else {
+    setStatus(status, `${entries.length} Foto(s) vorbereitet.`);
+  }
 }
 
-function render(list: HTMLElement, pdfButton: HTMLButtonElement) {
+function render(
+  list: HTMLElement,
+  pdfButton: HTMLButtonElement,
+  status: HTMLElement,
+  shareButton: HTMLButtonElement,
+  downloadButton: HTMLButtonElement
+) {
   if (!entries.length) {
     const emptyState = document.createElement("div");
     emptyState.className = "empty-inline";
@@ -350,6 +387,24 @@ function render(list: HTMLElement, pdfButton: HTMLButtonElement) {
       entry.mode === "document"
         ? "mode-badge mode-badge--document"
         : "mode-badge";
+    const scanNote =
+      entry.mode === "document"
+        ? `<p class="scan-note">${
+            entry.scanInfo.autoCropApplied
+              ? "Automatischer Zuschnitt aktiv"
+              : "Originalansicht (kein Auto-Crop)"
+          }</p>`
+        : "";
+    const scanAction =
+      entry.mode === "document"
+        ? `<button type="button" class="scan-toggle" data-action="toggle-scan">
+            ${
+              entry.scanInfo.autoCropApplied
+                ? "Auto-Crop deaktivieren"
+                : "Auto-Crop erneut versuchen"
+            }
+          </button>`
+        : "";
 
     article.innerHTML = `
       <div class="photo-thumb">
@@ -374,22 +429,57 @@ function render(list: HTMLElement, pdfButton: HTMLButtonElement) {
             )}</button>
           </div>
         </header>
+        ${scanNote}
+        ${scanAction}
         <textarea rows="3" placeholder="Beschreibung ergänzen" data-entry="${
           entry.id
         }">${entry.description}</textarea>
       </div>`;
 
     article.querySelectorAll("button").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const action = btn.getAttribute("data-action");
+        if (!action) {
+          return;
+        }
         if (action === "delete") {
           removeEntry(index);
         } else if (action === "up") {
           moveEntry(index, -1);
         } else if (action === "down") {
           moveEntry(index, 1);
+        } else if (action === "toggle-scan" && entry.mode === "document") {
+          if (btn.getAttribute("data-busy") === "true") {
+            return;
+          }
+          const preferAuto = !entry.scanInfo.autoCropApplied;
+          btn.setAttribute("data-busy", "true");
+          btn.setAttribute("disabled", "true");
+          try {
+            await reprocessEntryScanPreference(entry, preferAuto);
+            resetGeneratedPdf(shareButton, downloadButton);
+            const autoCropState = entry.scanInfo.autoCropApplied;
+            const message = autoCropState
+              ? "Automatischer Zuschnitt aktiviert."
+              : preferAuto
+              ? "Auto-Crop nicht möglich – Original verwendet."
+              : "Auto-Crop deaktiviert – Original verwendet.";
+            const tone: "info" | "error" =
+              !autoCropState && preferAuto ? "error" : "info";
+            setStatus(status, message, tone);
+          } catch (error) {
+            console.error("Scan-Modus konnte nicht aktualisiert werden", error);
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Scan-Modus konnte nicht aktualisiert werden.";
+            setStatus(status, message, "error");
+          } finally {
+            btn.removeAttribute("data-busy");
+            btn.removeAttribute("disabled");
+          }
         }
-        render(list, pdfButton);
+        render(list, pdfButton, status, shareButton, downloadButton);
       });
     });
 
@@ -599,10 +689,20 @@ async function tryShare(file: File): Promise<ShareResult> {
   }
 }
 
+type ProcessedFile = {
+  file: File;
+  meta?: { autoCropApplied: boolean };
+};
+
+type ConvertOptions = {
+  skipAutoCrop?: boolean;
+};
+
 async function convertFileToPreset(
   file: File,
-  presetKey: PresetKey
-): Promise<File> {
+  presetKey: PresetKey,
+  options?: ConvertOptions
+): Promise<ProcessedFile> {
   const isHeic =
     /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
   if (isHeic) {
@@ -617,7 +717,16 @@ async function convertFileToPreset(
   }
   const config = QUALITY_PRESETS[presetKey] ?? QUALITY_PRESETS[DEFAULT_PRESET];
   const { image, orientation, cleanup } = await loadImageWithOrientation(file);
-  const canvas = renderImageToCanvas(image, orientation, config);
+  let canvas = renderImageToCanvas(image, orientation, config);
+  let autoCropApplied = false;
+  const shouldAutoCrop = presetKey === "document" && !options?.skipAutoCrop;
+  if (shouldAutoCrop) {
+    const { canvas: croppedCanvas, success } = await autoCropDocument(canvas);
+    if (success) {
+      canvas = croppedCanvas;
+      autoCropApplied = true;
+    }
+  }
   if (presetKey === "document") {
     enhanceDocumentCanvas(canvas);
   }
@@ -629,28 +738,55 @@ async function convertFileToPreset(
   const blob = await canvasToBlob(canvas, targetMime, qualityValue);
   cleanup?.();
   const extension = mimeTypeToExtension(targetMime);
-  return new File([blob], ensureExtension(file.name, extension), {
-    type: targetMime,
-  });
+  const processedFile = new File(
+    [blob],
+    ensureExtension(file.name, extension),
+    {
+      type: targetMime,
+    }
+  );
+  return {
+    file: processedFile,
+    meta: { autoCropApplied },
+  };
 }
 
 async function buildPayloadFromSources(
-  sources: Array<{ file: File; description: string; mode: CaptureMode }>,
+  sources: Array<{
+    file: File;
+    description: string;
+    mode: CaptureMode;
+    scanPreference: ScanPreference;
+  }>,
   presetOverride?: PresetKey
 ) {
   const payload: PhotoEntryPayload[] = [];
   for (const source of sources) {
     const processed = await convertFileToPreset(
       source.file,
-      presetOverride ?? getPresetForMode(source.mode)
+      presetOverride ?? getPresetForMode(source.mode),
+      { skipAutoCrop: source.scanPreference === "original" }
     );
     payload.push({
-      file: processed,
+      file: processed.file,
       description: source.description,
       mode: source.mode,
     });
   }
   return payload;
+}
+
+async function reprocessEntryScanPreference(entry: Entry, preferAuto: boolean) {
+  const processed = await convertFileToPreset(
+    entry.sourceFile,
+    getPresetForMode(entry.mode),
+    { skipAutoCrop: !preferAuto }
+  );
+  entry.file = processed.file;
+  entry.scanInfo.autoCropApplied = Boolean(processed.meta?.autoCropApplied);
+  if (entry.mode === "document") {
+    entry.scanPreference = entry.scanInfo.autoCropApplied ? "auto" : "original";
+  }
 }
 
 function enhanceDocumentCanvas(canvas: HTMLCanvasElement) {
@@ -709,7 +845,7 @@ function canvasToBlob(
         if (blob) {
           resolve(blob);
         } else {
-          reject(new Error("Bild konnte nicht komprimiert werden."));
+          reject(new Error("Canvas konnte kein Blob erzeugen."));
         }
       },
       type,
