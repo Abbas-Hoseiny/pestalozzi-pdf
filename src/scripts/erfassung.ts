@@ -729,6 +729,7 @@ type LoadedImage = {
 async function loadImageWithOrientation(file: File): Promise<LoadedImage> {
   // Try to read EXIF first; fall back to upright if unavailable.
   const orientation = (await readExifOrientation(file)) ?? 1;
+  const trustBrowserOrientation = browserAppliesImageOrientation();
 
   // Prefer ImageBitmap to avoid layout side effects and free memory afterwards.
   // Modern browsers auto-apply EXIF orientation when loading images via createImageBitmap.
@@ -736,14 +737,16 @@ async function loadImageWithOrientation(file: File): Promise<LoadedImage> {
   // apply orientation transforms ourselves for consistent behavior.
   if (typeof createImageBitmap === "function") {
     try {
-      // Try to disable browser auto-rotation by using imageOrientation: 'none'
-      // This gives us consistent control over orientation handling.
-      const bitmap = await createImageBitmap(file, {
-        imageOrientation: "none",
-      });
+      // On browsers (notably iOS Safari) that already return upright bitmaps,
+      // we skip the manual orientation workflow altogether.
+      const bitmap = trustBrowserOrientation
+        ? await createImageBitmap(file)
+        : await createImageBitmap(file, {
+            imageOrientation: "none",
+          });
       return {
         image: bitmap,
-        orientation,
+        orientation: trustBrowserOrientation ? 1 : orientation,
         cleanup: () => bitmap.close?.(),
       };
     } catch (error) {
@@ -753,7 +756,7 @@ async function loadImageWithOrientation(file: File): Promise<LoadedImage> {
         const bitmap = await createImageBitmap(file);
         return {
           image: bitmap,
-          orientation: 1, // Browser already applied rotation
+          orientation: trustBrowserOrientation ? 1 : orientation,
           cleanup: () => bitmap.close?.(),
         };
       } catch (innerError) {
@@ -768,7 +771,7 @@ async function loadImageWithOrientation(file: File): Promise<LoadedImage> {
   const img = await loadImage(file);
   // Browsers typically apply EXIF orientation automatically for <img>,
   // so we reset to 1 to avoid rotating twice in the canvas pipeline.
-  return { image: img, orientation: 1 };
+  return { image: img, orientation: trustBrowserOrientation ? 1 : orientation };
 }
 
 function getSourceDimensions(image: CanvasImageSource) {
@@ -836,6 +839,14 @@ async function readExifOrientation(file: File): Promise<number | null> {
     offset += segmentLength + 2;
   }
   return null;
+}
+
+function browserAppliesImageOrientation() {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  const isTouchMac = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  const isIos = /iPad|iPhone|iPod/.test(ua);
+  return isIos || isTouchMac;
 }
 
 if (document.readyState === "loading") {
