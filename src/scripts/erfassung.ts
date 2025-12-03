@@ -459,6 +459,13 @@ function setStatus(
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
+  if (isIosDevice()) {
+    const preview = window.open(url, "_blank");
+    if (preview) {
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return;
+    }
+  }
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
@@ -471,6 +478,12 @@ function triggerDownload(blob: Blob, filename: string) {
 type ShareResult = "shared" | "aborted" | "failed" | "unsupported";
 
 async function tryShare(file: File): Promise<ShareResult> {
+  function isIosDevice() {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    const isTouchMac = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return /iPad|iPhone|iPod/.test(ua) || isTouchMac;
+  }
   if (!navigator.canShare || !navigator.share) {
     return "unsupported";
   }
