@@ -193,8 +193,12 @@ function ready() {
       setStatus(status, "Bitte zuerst ein PDF erzeugen.", "error");
       return;
     }
-    triggerDownload(lastPdfBlob, lastPdfFilename);
-    setStatus(status, "PDF gespeichert.");
+    const downloadResult = triggerDownload(lastPdfBlob, lastPdfFilename);
+    if (downloadResult === "preview") {
+      setStatus(status, "PDF geöffnet – über Teilen sichern.");
+    } else {
+      setStatus(status, "PDF gespeichert.");
+    }
   });
 
   render(list, pdfButton);
@@ -457,13 +461,15 @@ function setStatus(
   element.dataset.tone = tone;
 }
 
-function triggerDownload(blob: Blob, filename: string) {
+type DownloadResult = "downloaded" | "preview";
+
+function triggerDownload(blob: Blob, filename: string): DownloadResult {
   const url = URL.createObjectURL(blob);
   if (isIosDevice()) {
     const preview = window.open(url, "_blank");
     if (preview) {
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      return;
+      return "preview";
     }
   }
   const anchor = document.createElement("a");
@@ -473,17 +479,12 @@ function triggerDownload(blob: Blob, filename: string) {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+  return "downloaded";
 }
 
 type ShareResult = "shared" | "aborted" | "failed" | "unsupported";
 
 async function tryShare(file: File): Promise<ShareResult> {
-  function isIosDevice() {
-    const ua = navigator.userAgent || "";
-    const platform = navigator.platform || "";
-    const isTouchMac = platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    return /iPad|iPhone|iPod/.test(ua) || isTouchMac;
-  }
   if (!navigator.canShare || !navigator.share) {
     return "unsupported";
   }
@@ -518,6 +519,13 @@ async function tryShare(file: File): Promise<ShareResult> {
     console.error("Teilen nicht möglich", error);
     return "failed";
   }
+}
+
+function isIosDevice() {
+  const ua = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  const isTouchMac = platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return /iPad|iPhone|iPod/.test(ua) || isTouchMac;
 }
 
 type ProcessedFile = {
