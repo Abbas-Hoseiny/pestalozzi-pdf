@@ -235,6 +235,7 @@ const {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+      order: -1;
     }
 
     .gallery-label {
@@ -352,17 +353,20 @@ const {
     @media (min-width: 900px) {
       .panel-columns {
         flex-direction: row;
-        align-items: stretch;
+        align-items: flex-start;
         gap: 1.5rem;
       }
 
-      .control-stack,
-      .gallery-inline {
-        flex: 1;
+      .control-stack {
+        flex: 0 0 320px;
+        order: 0;
       }
 
       .gallery-inline {
+        flex: 1 1 auto;
+        order: 1;
         padding: 1.25rem 1.5rem 1.5rem;
+        min-width: 0;
       }
     }
   </style>
